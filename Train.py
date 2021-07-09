@@ -132,17 +132,24 @@ model.train()
 for epoch in range(start_epoch, args.epochs):
     labels_list = []
     
-    pbar = tqdm(total=len(train_batch))
+    # pbar = tqdm(total=len(train_batch))
     for j,(imgs) in enumerate(train_batch):
         imgs = Variable(imgs).cuda()
         imgs = imgs.view(args.batch_size,-1,imgs.shape[-2],imgs.shape[-1])
 
         outputs, _, _, _, fea_loss, _, dis_loss = model.forward(imgs[:,0:12], None, True)
         optimizer_D.zero_grad()
+        # construction loss
         loss_pixel = torch.mean(loss_func_mse(outputs, imgs[:,12:]))
+
+        # constraint loss
         fea_loss = fea_loss.mean()
+
+        # distance loss
         dis_loss = dis_loss.mean()
+
         loss_D = args.loss_fra_reconstruct*loss_pixel + args.loss_fea_reconstruct * fea_loss + args.loss_distinguish * dis_loss 
+
         loss_D.backward(retain_graph=True)
         optimizer_D.step()
 
@@ -151,14 +158,14 @@ for epoch in range(start_epoch, args.epochs):
         loss_fea.update(args.loss_fea_reconstruct*fea_loss.item(), 1)
         loss_dis.update(args.loss_distinguish*dis_loss.item(), 1)
 
-        pbar.set_postfix({
-                      'Epoch': '{0} {1}'.format(epoch+1, args.exp_dir),
-                      'Lr': '{:.6f}'.format(optimizer_D.param_groups[-1]['lr']),
-                      'PRe': '{:.6f}({:.4f})'.format(loss_pixel.item(), loss_pix.avg),
-                      'FRe': '{:.6f}({:.4f})'.format(fea_loss.item(), loss_fea.avg),
-                      'Dist': '{:.6f}({:.4f})'.format(dis_loss.item(), loss_dis.avg),
-                    })
-        pbar.update(1)
+        # pbar.set_postfix({
+        #               'Epoch': '{0} {1}'.format(epoch+1, args.exp_dir),
+        #               'Lr': '{:.6f}'.format(optimizer_D.param_groups[-1]['lr']),
+        #               'PRe': '{:.6f}({:.4f})'.format(loss_pixel.item(), loss_pix.avg),
+        #               'FRe': '{:.6f}({:.4f})'.format(fea_loss.item(), loss_fea.avg),
+        #               'Dist': '{:.6f}({:.4f})'.format(dis_loss.item(), loss_dis.avg),
+        #             })
+        # pbar.update(1)
 
     print('----------------------------------------')
     print('Epoch:', epoch+1)
@@ -168,7 +175,7 @@ for epoch in range(start_epoch, args.epochs):
     print('Dist: {:.6f}({:.4f})'.format(dis_loss.item(), loss_dis.avg))
     print('----------------------------------------')   
 
-    pbar.close()
+    # pbar.close()
 
     loss_pix.reset()
     loss_fea.reset()
